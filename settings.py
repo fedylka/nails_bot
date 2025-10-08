@@ -1,10 +1,10 @@
-from pydantic_settings import BaseSettings
+# from pydantic import BaseModel
 
-class Settings(BaseSettings):
-    BOT_TOKEN: str
-    ADMINS: list[int] 
+# class Settings(BaseModel):
+#     BOT_TOKEN: str
+#     # ADMINS: list[int] 
 
-    class Config:
-        env_file = ".env"
+#     class Config:
+#         env_file = ".env"
 
-settings = Settings()
+# settings = Settings()

@@ -9,7 +9,7 @@ import bot.keyboards.keyboard as kb
 import bot.datebase.requests as rq
 import bot.states.states_user as st
 
-from settings import settings
+# from settings import settings
 
 router = Router()
 

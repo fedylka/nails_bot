@@ -9,14 +9,16 @@ from bot.handlers.user import router as user_router
 from bot.handlers.admin import router as admin_router
 from bot.datebase.models import async_main
 
-from settings import settings
+from dotenv import load_dotenv
+from os import getenv# from settings import settings
 
 
 async def main():
     await async_main()
-
+    load_dotenv()
+    token = getenv("BOT_TOKEN")
     
-    bot_token = settings.BOT_TOKEN
+    bot_token = token #settings.BOT_TOKEN
     
     bot = Bot(token=bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
