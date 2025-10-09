@@ -9,7 +9,9 @@ import bot.keyboards.keyboard as kb
 import bot.datebase.requests as rq
 import bot.states.states_user as st
 
-# from settings import settings
+from settings import settings
+
+from aiogram_calendar import *
 
 router = Router()
 
@@ -24,13 +26,17 @@ router = Router()
 
 @router.callback_query(F.data == "add_slot", st.UserMenuStates.main_menu)
 async def process_name_slot(callback: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(st.AdminMenuStates.add_slot)
     await callback.answer()
-    print(callback.message.date)
-    # last_message_id = await state.get_value("last_message_id")
+    await callback.message.edit_text(
+        text="Выбери нужные даты:",
+        reply_markup=await kb.calendar_keyboard(callback.message.date.year, callback.message.date.month)
+    )
+
+    # last_message_id= await state.get_value("last_message_id")
     # await state.clear()
     # await state.set_state(st.AdminMenuStates.date_slot)
     # await callback.message.edit_text(text="Введите дату.\nПример: 15.02.25")
-    
 
 
 

@@ -17,8 +17,8 @@ class UserMenuStates(StatesGroup):
     last_message_id = State()
 
 class AdminMenuStates(StatesGroup):
-    date_slot = State()
-    time_slote = State()
+    add_slot = State()
+    
 
 
 
