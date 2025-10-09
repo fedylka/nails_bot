@@ -14,13 +14,15 @@ async def main_menu_keyboard(isAdmin: bool, mode: bool) -> InlineKeyboardBuilder
     if isAdmin:
         if mode:
             builder.add(
-                InlineKeyboardButton(text="Добавить окошки", callback_data="add_slot"),
-                InlineKeyboardButton(text="Убрать окошки", callback_data="delete_slot"))
+                InlineKeyboardButton(text="Добавить", callback_data="add_slot"),
+                InlineKeyboardButton(text="Убрать", callback_data="delete_slot"),
+                )
         else:
-            builder.add(InlineKeyboardButton(text="Записаться", callback_data="to_service"))
+            builder.add(InlineKeyboardButton(text="Записаться", callback_data="to_service"),
+                        InlineKeyboardButton(text="Личный кабинет", callback_data="to_account"))
         
         builder.add(InlineKeyboardButton(text="Сменить режим", callback_data="change_mode"))
-        return builder.adjust(2).as_markup()
+        return builder.adjust(1, 2).as_markup()
 
     else:  
         builder.add(InlineKeyboardButton(text="Записаться", callback_data="to_service"),
@@ -45,9 +47,9 @@ account_menu_keyboard = InlineKeyboardMarkup(inline_keyboard=[
 async def calendar_keyboard(year: int, month: int) -> InlineKeyboardBuilder:
     builder = InlineKeyboardBuilder()
     builder.add(
-        InlineKeyboardButton(text="<", callback_data="<"),
+        InlineKeyboardButton(text="<", callback_data=f"{month}<"),
         InlineKeyboardButton(text=str(calendar.month_name[month]), callback_data="_"),
-        InlineKeyboardButton(text=">", callback_data=">"),
+        InlineKeyboardButton(text=">", callback_data=f"{month}>"),
     )
     builder.add(
         InlineKeyboardButton(text="Пн", callback_data="_"),
@@ -65,4 +67,5 @@ async def calendar_keyboard(year: int, month: int) -> InlineKeyboardBuilder:
                 builder.button(text=str(day), callback_data=" ")
             else:
                 builder.button(text=" ", callback_data="_")
+    builder.button(text="Назад", callback_data="back_to_main_menu")
     return builder.adjust(3, 7).as_markup()
