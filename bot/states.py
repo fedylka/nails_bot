@@ -14,12 +14,10 @@ class UserMenuStates(StatesGroup):
 
     isAdmin= State()
     mode = State()
+    
     last_message_id = State()
 
 class AdminMenuStates(StatesGroup):
-    add_slot = State()
-    
 
-
-
-
+    day_slot = State()
+    time_slot = State()

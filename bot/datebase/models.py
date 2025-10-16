@@ -1,8 +1,8 @@
-from sqlalchemy import BigInteger, String, Boolean, ForeignKey, DateTime, UniqueConstraint, func
+from sqlalchemy import BigInteger, String, Boolean, ForeignKey, DateTime, UniqueConstraint, func, Time, JSON, ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 
-from datetime import datetime
+from datetime import datetime 
 
 engine = create_async_engine(url="sqlite+aiosqlite:///db.sqlite3")
 
@@ -20,9 +20,18 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(16))
     phonenumber: Mapped[str] = mapped_column(String(12))
     isAdmin: Mapped[bool] = mapped_column(Boolean)
-    mode: Mapped[bool] = mapped_column(Boolean)
+    mode: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # bookings: Mapped[list["Booking"]] = relationship(back_populates="user")
+
+
+class Slot(Base):
+    __tablename__ = "slots"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True) 
+    date: Mapped[str] = mapped_column(String(10))
+    time: Mapped[str] = mapped_column(String(5))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 # class Service(Base):
@@ -33,16 +42,6 @@ class User(Base):
 #     description: Mapped[str] = mapped_column(String(64), nullable=True)
 
 #     slots: Mapped[list["Slot"]] = relationship(back_populates="service")
-
-
-class Slot(Base):
-    __tablename__ = "slots"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True) 
-    data: Mapped[str] = mapped_column(DateTime)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-
-
 
 
 # class Booking(Base):

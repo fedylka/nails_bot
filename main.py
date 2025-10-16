@@ -9,7 +9,7 @@ from bot.handlers.user import router as user_router
 from bot.handlers.admin import router as admin_router
 from bot.datebase.models import async_main
 
-from settings import settings
+from bot.settings import settings
 
 
 async def main():
