@@ -1,24 +1,28 @@
-import re
+from re import fullmatch
 
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
-from aiogram.exceptions import TelegramBadRequest
+# from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.storage.memory import MemoryStorage
 
-import bot.states.states_user as st
-import bot.keyboards.keyboard as kb
+import bot.states as st
+import bot.keyboard as kb
 import bot.datebase.requests as rq
+import bot.middleware as mw
 
-# from settings import settings 
+from bot.settings import settings 
 
 
 router = Router()
 
+# router.message.outer_middleware(mw.DeleteKeyboard(storage=MemoryStorage()))
+
 
 #Регистрация нового пользователя
 @router.message(CommandStart())
-async def command_start(message: Message, state: FSMContext) -> None:
+async def command_start(message: Message, state: FSMContext) -> None: 
     if not (await rq.get_user(message.from_user.id)):
         await state.set_state(st.RegisterUser.name)
         await message.answer("Привет! Давай пройдём короткую регистрацию.")
@@ -32,7 +36,7 @@ async def process_name(message: Message, state: FSMContext) -> None:
     name = message.text
     if len(name) > 16:
         await message.answer("Слишком длинное. Попробуй ещё раз:")
-    elif not bool(re.fullmatch(r"[a-zA-Zа-яА-ЯёЁ\s\-]+", name)):
+    elif not bool(fullmatch(r"[a-zA-Zа-яА-ЯёЁ\s\-]+", name)):
         await message.answer("Недопустимые символы. Попробуй ещё раз:")
     else:
         await state.update_data(name=name)
@@ -50,11 +54,12 @@ async def process_number(message: Message, state: FSMContext) -> None:
             tg_id=message.from_user.id,
             name=data["name"], 
             phonenumber=data["phonenumber"],
-            isAdmin=True#bool(message.from_user.id in settings.ADMINS)
+            isAdmin=bool(message.from_user.id in settings.ADMINS)
         )
         await state.clear()  
         await state.set_state(st.UserMenuStates.main_menu)
-        # await state.update_data(isAdmin=bool(message.from_user.id in settings.ADMINS), mode=False)
+        await state.update_data(isAdmin=bool(message.from_user.id in settings.ADMINS),
+                                mode=False)
 
         await message.answer("Регистрация прошла успешно! Твои данные сохранены.", reply_markup=ReplyKeyboardRemove())
         await main_menu(message, state)
@@ -63,32 +68,37 @@ async def process_number(message: Message, state: FSMContext) -> None:
         await message.answer("Нажмите на кнопку 'Поделиться контактом'.")
 
 
-async def delete_last_keyboard(event: Message, state: FSMContext) -> None:
+async def delete_last_keyboard(message: Message, state: FSMContext) -> None:
     last_message_id = await state.get_value("last_message_id")
     if last_message_id:
-        await event.bot.edit_message_reply_markup(
-        chat_id=event.chat.id, message_id=last_message_id, reply_markup=None
+        await message.bot.edit_message_reply_markup(
+        chat_id=message.chat.id, message_id=last_message_id, reply_markup=None
         )
+        
 
 
 @router.message(st.UserMenuStates.main_menu)
 @router.callback_query(F.data == "back_to_main_menu")
-async def main_menu(event: Message|CallbackQuery, state: FSMContext) -> None:
+async def main_menu(event: CallbackQuery|Message, state: FSMContext) -> None:
     text = "<b>Главное Меню</b>\n\n        👇Выбери нужное действие👇"
     isAdmin = await state.get_value("isAdmin")
     mode = await state.get_value("mode")
     if isAdmin is None or mode is None:
-        # isAdmin = bool(event.from_user.id in settings.ADMINS)
+        isAdmin = bool(event.from_user.id in settings.ADMINS)
         mode = False
-        await state.update_data(isAdmin=isAdmin, mode=mode)    
+        await state.update_data(isAdmin=isAdmin, mode=mode)   
+    if mode:
+        keyboard = await kb.main_menu_admin_keyboard()
+    else:
+        keyboard = await kb.main_menu_user_keyboard(isAdmin)
     if isinstance(event, Message):
         await delete_last_keyboard(event, state)
-        last_msg = await event.answer(text=text, reply_markup=await kb.main_menu_keyboard(isAdmin=isAdmin, mode=mode))
+        last_msg = await event.answer(text=text, reply_markup=keyboard)
         await state.update_data(last_message_id=last_msg.message_id)
     else:
         await event.answer()
         await state.set_state(st.UserMenuStates.main_menu)
-        await event.message.edit_text(text=text, reply_markup=await kb.main_menu_keyboard(isAdmin=isAdmin, mode=mode))
+        await event.message.edit_text(text=text, reply_markup=keyboard)
 
 @router.message(st.UserMenuStates.main_menu)
 @router.callback_query(F.data == "change_mode")
@@ -98,13 +108,16 @@ async def change_mode(callback: CallbackQuery, state: FSMContext) -> None:
     isAdmin = await state.get_value("isAdmin")
     mode = await state.get_value("mode")
     if isAdmin is None or mode is None:
-        # isAdmin = bool(callback.from_user.id in settings.ADMINS)
+        isAdmin = bool(callback.from_user.id in settings.ADMINS)
         mode = False
         await state.update_data(isAdmin=isAdmin, mode=~mode)
-        
+    if mode:    
+        keyboard = await kb.main_menu_user_keyboard(isAdmin)
+    else:
+        keyboard = await kb.main_menu_admin_keyboard()
     await state.update_data(mode=~mode)
     await callback.message.edit_reply_markup(
-        reply_markup=await kb.main_menu_keyboard(isAdmin=isAdmin, mode=~mode)
+        reply_markup=keyboard
     )
 
 
@@ -114,7 +127,8 @@ async def process_account(event: Message|CallbackQuery, state: FSMContext) -> No
     user: rq.User = await rq.get_user(tg_id=event.from_user.id)
     text = f"Имя: {user.name}\nНомер телефона: {user.phonenumber}"
     if isinstance(event, Message):
-        await delete_last_keyboard(event, state)
+        if (await state.get_state()) != "UserMenuStates:change_name":
+            await delete_last_keyboard(event, state)
         last_msg = await event.answer(text=text, reply_markup=kb.account_menu_keyboard)
         await state.update_data(last_message_id=last_msg.message_id)
     else:
@@ -131,6 +145,6 @@ async def change_name_process(callback: CallbackQuery, state: FSMContext) -> Non
 @router.message(st.UserMenuStates.change_name)
 async def change_name_complite(message: Message, state: FSMContext) -> None:
     await rq.update_name_user(tg_id=message.from_user.id, new_name=message.text)
-    await state.set_state(st.UserMenuStates.account_menu)
+    # await state.set_state(st.UserMenuStates.account_menu)
     await message.answer(text="Имя успешно изменено.")
     await process_account(message, state)
